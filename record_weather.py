@@ -81,10 +81,10 @@ def main():
 
     while True:
         now = datetime.now()       
-        if ((((now-last_update).seconds)/60)>15):
+        if (now-last_update).seconds/60 > 15:
             rec_gov_to_db()
-        # return # just while testing
-        last_update = datetime.now()
+            last_update = datetime.now()
+            print(f"updated at {last_update}")
         sleep(60)
 
 if __name__ == "__main__":
