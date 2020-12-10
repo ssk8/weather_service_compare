@@ -1,16 +1,14 @@
-from typing import List, Optional
 import session_factory
 from weather_model import WeatherPoint
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
-#import json, pprint
+import json, pprint
 
 
-def record_gov_point(point: WeatherPoint):
+def record_point(point: WeatherPoint):
     session = session_factory.create_session()
-
     session.add(point)
     session.commit()
     session.close()
@@ -25,7 +23,8 @@ def get_gov_point(new_data: dict):
     point.rawMessage = new_data["rawMessage"]
     point.textDescription = new_data["textDescription"]
     point.icon = new_data["icon"]
-    point.presentWeather = ",".join(new_data["presentWeather"])
+    if new_data["presentWeather"]:
+        point.presentWeather = ", ".join([w["weather"] for w in new_data["presentWeather"]])
     point.temperature = new_data["temperature"]["value"]    # (Float)
     point.temperature_unit = new_data["temperature"]["unitCode"]    # (String)
     point.dewpoint = new_data["dewpoint"]["value"]    # (Float)
@@ -68,15 +67,25 @@ def get_gov_api():
     req = requests.get("https://api.weather.gov/stations/KCNK/observations/latest")
     return req.json()
 
-def main():
-    # with open("weather.json", "r") as json_file:
+def rec_gov_to_db():
+    # with open("data/gov/latest3.json", "r") as json_file:
     #     current_json = json_file.read()
     # current_data = json.loads(current_json)
+    current_data = get_gov_api()
+    new_data_point = get_gov_point(current_data["properties"])
+    record_point(new_data_point)
+
+
+def main():
+    last_update = datetime.now()-timedelta(minutes=20)
+
     while True:
-        current_data = get_gov_api()
-        new_data_point = get_gov_point(current_data["properties"])
-        record_gov_point(new_data_point)
-        sleep(60*10)
+        now = datetime.now()       
+        if ((((now-last_update).seconds)/60)>15):
+            rec_gov_to_db()
+        # return # just while testing
+        last_update = datetime.now()
+        sleep(60)
 
 if __name__ == "__main__":
     main()
